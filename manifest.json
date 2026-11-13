@@ -1,0 +1,19 @@
+{
+ "name": "Pad des Animaux",
+ "short_name": "Animaux",
+ "start_url": "./",
+ "scope": "./",
+ "display": "fullscreen",
+ "orientation": "any",
+ "background_color": "#1d3b5c",
+ "theme_color": "#1d3b5c",
+ "lang": "fr",
+ "icons": [
+  {
+   "src": "icon.png",
+   "sizes": "1024x1024",
+   "type": "image/png",
+   "purpose": "any"
+  }
+ ]
+}

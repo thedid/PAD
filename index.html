@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="fr"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Animaux">
+<meta name="theme-color" content="#1d3b5c">
+<link rel="apple-touch-icon" href="icon.png">
+<link rel="icon" type="image/png" href="icon.png">
+<link rel="manifest" href="manifest.json">
+<style>
+*,*::before,*::after{box-sizing:border-box}
+html{height:100%;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0;font:14px system-ui,-apple-system,sans-serif}
+img{max-width:100%}[hidden]{display:none!important}
+</style>
+<title>Pad des Animaux</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Nunito:wght@600;800&display=swap">
+<style>
+/* Layout: one-screen toy — slim top bar, 4×4 pad grid filling the rest; parent drawer slides over from the bottom */
+:root{
+  --bg:#1d3b5c; --bg2:#244a72; --fg:#fff8ec; --muted:#b9cde3;
+  --panel:#fff8ec; --panel-fg:#1d2b3a; --accent:#ffb627; --ok:#3cc47c; --danger:#e8505b;
+  --display:"Baloo 2","Nunito",ui-rounded,system-ui,sans-serif;
+  --body:"Nunito",ui-rounded,system-ui,sans-serif;
+  color-scheme:dark;
+}
+html,body{height:100%}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);overflow:hidden;
+  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:manipulation}
+.app{height:100%;display:flex;flex-direction:column;gap:12px;box-sizing:border-box;
+  padding-block:12px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+h1{font-family:var(--display);font-weight:800;font-size:clamp(20px,3.2vw,30px);margin:0;letter-spacing:.5px}
+h1 span{color:var(--accent)}
+.lock{position:relative;border:0;background:var(--bg2);color:var(--muted);font:700 14px var(--body);
+  padding:10px 16px;border-radius:999px;overflow:hidden;cursor:pointer;touch-action:none}
+.hdr{display:flex;gap:8px}
+.fs{border:0;background:var(--bg2);color:var(--muted);font:700 14px var(--body);padding:10px 16px;border-radius:999px;cursor:pointer}
+.lock .fill{position:absolute;inset:0;background:var(--accent);opacity:.35;transform:scaleX(0);transform-origin:left}
+.lock.holding .fill{transition:transform 1.5s linear;transform:scaleX(1)}
+.lock b{position:relative}
+.grid{flex:1;min-height:0;display:grid;grid-template-columns:repeat(4,1fr);grid-template-rows:repeat(4,1fr);gap:clamp(8px,1.4vw,16px)}
+.pad{position:relative;border:0;border-radius:clamp(14px,2.4vw,26px);background:var(--c);overflow:hidden;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;
+  box-shadow:inset 0 -6px 0 rgba(0,0,0,.18);touch-action:none;transition:transform .08s ease;padding:0;color:#1d2b3a}
+.pad img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.pad .emo{font-size:clamp(34px,7vh,84px);line-height:1;transition:transform .15s}
+.pad .lbl{font-family:var(--display);font-weight:800;font-size:clamp(12px,2vh,20px);position:relative;
+  background:rgba(255,255,255,.7);padding:0 10px;border-radius:999px}
+.pad.has-img .lbl{position:absolute;bottom:8px}
+.pad.hit{transform:scale(.93)}
+.pad.hit .emo{transform:scale(1.25) rotate(-8deg)}
+.pad .ring{position:absolute;inset:0;border-radius:inherit;border:5px solid #fff;opacity:0;pointer-events:none}
+.pad.hit .ring{animation:ring .45s ease-out}
+@keyframes ring{from{opacity:.9;transform:scale(.85)}to{opacity:0;transform:scale(1.05)}}
+.editing .pad{outline:3px dashed var(--accent);outline-offset:-3px;touch-action:pan-y}
+.app.editing{overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+.editing .grid{flex:none;grid-template-rows:repeat(4,clamp(110px,19vh,180px));padding-bottom:62vh}
+.editing .pad.sel{outline:6px solid var(--accent);outline-offset:-6px}
+.editing .pad::after{content:"✎";position:absolute;top:6px;right:10px;font-size:20px;color:#1d2b3a}
+.banner{background:var(--accent);color:#1d2b3a;font-weight:800;border-radius:12px;padding:8px 14px;display:flex;
+  justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.banner button,.banner .fakebtn{border:0;background:#1d2b3a;color:#fff;font:800 14px var(--body);padding:8px 14px;border-radius:999px;cursor:pointer}
+.banner .bk{display:flex;gap:8px;flex-wrap:wrap}
+.banner #done{background:#fff;color:#1d2b3a}
+/* drawer */
+.sheet{position:fixed;inset:auto 0 0 0;background:var(--panel);color:var(--panel-fg);border-radius:22px 22px 0 0;
+  box-shadow:0 -10px 40px rgba(0,0,0,.35);max-height:55%;overflow:auto;z-index:20;
+  padding:20px max(20px,env(safe-area-inset-right,0px)) calc(20px + env(safe-area-inset-bottom,0px)) max(20px,env(safe-area-inset-left,0px));
+  -webkit-user-select:text;user-select:text}
+.sheet h2{font-family:var(--display);margin:0 0 12px;font-size:24px;display:flex;align-items:center;gap:10px}
+.row{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}
+.field{display:flex;flex-direction:column;gap:6px}
+.field>span{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:#5a6b7c}
+.field input[type=text]{font:700 18px var(--body);padding:10px 12px;border:2px solid #d9cdb8;border-radius:12px;background:#fff;color:var(--panel-fg)}
+.emos{display:flex;flex-wrap:wrap;gap:6px}
+.emos button{font-size:28px;width:48px;height:48px;border:2px solid transparent;border-radius:12px;background:#f1e7d4}
+.emos button.on{border-color:var(--panel-fg)}
+.cols{display:flex;flex-wrap:wrap;gap:8px}
+.cols button{width:40px;height:40px;border-radius:50%;border:3px solid transparent;background:var(--c)}
+.cols button.on{border-color:var(--panel-fg)}
+.filebtn{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.btn{border:0;font:800 15px var(--body);padding:11px 16px;border-radius:12px;background:#e9dec9;color:var(--panel-fg);cursor:pointer}
+.btn.pri{background:var(--panel-fg);color:var(--panel)}
+.btn.ok{background:var(--ok);color:#fff}
+.btn.del{background:transparent;color:var(--danger);padding-inline:6px}
+.note{font-size:13px;color:#5a6b7c;margin:0}
+.actions{display:flex;justify-content:space-between;gap:10px;margin-top:18px;flex-wrap:wrap}
+input[type=file]{display:none}
+.toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);
+  background:#1d2b3a;color:#fff;padding:10px 18px;border-radius:999px;font-weight:800;z-index:30}
+.start{position:fixed;inset:0;z-index:40;background:rgba(29,59,92,.92);display:flex;align-items:center;justify-content:center}
+.start button{font:800 clamp(26px,5vw,44px) var(--display);background:var(--accent);color:#1d2b3a;border:0;border-radius:999px;
+  padding:20px 48px;box-shadow:0 8px 0 #c8851a}
+button:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){.pad,.pad .emo{transition:none}.pad.hit .ring{animation:none}}
+@media (max-width:520px){.pad .lbl{display:none}}
+</style>
+
+</head>
+<body>
+<div class="app" id="app">
+  <header>
+    <h1>Pad des <span>Animaux</span></h1>
+    <span class="hdr"><button class="fs" id="fs" aria-label="Plein écran">⛶ Plein écran</button>
+    <button class="lock" id="lock" aria-label="Mode parent : maintenir appuyé"><span class="fill"></span><b>🔒 Parents (maintenir)</b></button></span>
+  </header>
+  <div class="banner" id="banner" hidden>
+    <span>Mode parent : touche une case pour changer son image ou son son.</span>
+    <span class="bk">
+      <button id="exp">💾 Sauvegarder</button>
+      <label class="fakebtn" for="fBackup">📂 Restaurer</label>
+      <input type="file" id="fBackup" accept=".json,application/json">
+      <button id="done">Terminé</button>
+    </span>
+  </div>
+  <div class="grid" id="grid"></div>
+</div>
+
+<div class="sheet" id="sheet" hidden>
+  <h2><span id="sEmo">🐶</span> <span>Modifier la case</span></h2>
+  <div class="row">
+    <label class="field"><span>Nom affiché</span><input type="text" id="fLabel" maxlength="16"></label>
+    <div class="field"><span>Couleur</span><div class="cols" id="fCols"></div></div>
+  </div>
+  <div class="field" style="margin-top:14px"><span>Animal</span><div class="emos" id="fEmos"></div></div>
+  <div class="row" style="margin-top:16px">
+    <div class="field"><span>Image de fond</span>
+      <div class="filebtn">
+        <label class="btn" for="fImg">Choisir une photo</label>
+        <button class="btn del" id="rmImg" hidden>Retirer</button>
+      </div>
+      <input type="file" id="fImg" accept="image/*">
+      <p class="note" id="imgNote">Aucune photo, l'animal est affiché.</p>
+    </div>
+    <div class="field"><span>Son</span>
+      <div class="filebtn">
+        <label class="btn" for="fSnd">Choisir un son (WAV, MP3, M4A)</label>
+        <button class="btn" id="test">▶ Écouter</button>
+        <button class="btn del" id="rmSnd" hidden>Retirer</button>
+      </div>
+      <input type="file" id="fSnd" accept="audio/*,.wav,.mp3,.m4a,.aiff">
+      <p class="note" id="sndNote">Son de démo.</p>
+    </div>
+  </div>
+  <div class="actions">
+    <button class="btn del" id="reset">Remettre toutes les cases d'origine</button>
+    <button class="btn ok" id="close">Valider</button>
+  </div>
+</div>
+
+<div class="start" id="start"><button id="go">▶ Jouer</button></div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+const EMOS=["🐶","🐱","🐮","🐷","🐸","🦁","🐔","🐴","🐑","🦆","🐘","🐵","🐻","🦉","🐝","🐳","🐰","🐯","🐧","🐍","🦒","🐓","🐊","🦜"];
+const NAMES={"🐶":"Chien","🐱":"Chat","🐮":"Vache","🐷":"Cochon","🐸":"Grenouille","🦁":"Lion","🐔":"Poule","🐴":"Cheval","🐑":"Mouton","🦆":"Canard","🐘":"Éléphant","🐵":"Singe","🐻":"Ours","🦉":"Hibou","🐝":"Abeille","🐳":"Baleine","🐰":"Lapin","🐯":"Tigre","🐧":"Pingouin","🐍":"Serpent","🦒":"Girafe","🐓":"Coq","🐊":"Crocodile","🦜":"Perroquet"};
+const COLS=["#ffd166","#ff9f80","#f7a8c4","#c3a6ff","#8fd3ff","#7ee0b0","#c5e86c","#ffc46b"];
+const defaults=()=>EMOS.slice(0,16).map((e,i)=>({emoji:e,label:NAMES[e],color:COLS[i%COLS.length],img:null,snd:null}));
+let pads=defaults(), editing=false, cur=-1;
+const $=id=>document.getElementById(id);
+
+/* ---------- stockage (IndexedDB, sur cet iPad uniquement) ---------- */
+let db=null;
+function openDB(){return new Promise(r=>{try{const q=indexedDB.open("padAnimaux",1);
+  q.onupgradeneeded=()=>q.result.createObjectStore("kv");q.onsuccess=()=>{db=q.result;r()};q.onerror=()=>r()}catch(e){r()}})}
+function save(){try{if(!db)return;db.transaction("kv","readwrite").objectStore("kv").put(pads,"pads")}catch(e){}}
+function load(){return new Promise(r=>{try{if(!db)return r();const q=db.transaction("kv").objectStore("kv").get("pads");
+  q.onsuccess=()=>{if(Array.isArray(q.result)&&q.result.length===16)pads=q.result;r()};q.onerror=()=>r()}catch(e){r()}})}
+
+/* ---------- audio ---------- */
+let ctx=null; const buffers=new Map();
+function ac(){if(!ctx){ctx=new (window.AudioContext||window.webkitAudioContext)()}if(ctx.state==="suspended")ctx.resume();return ctx}
+async function decode(i){const p=pads[i];if(!p.snd){buffers.delete(i);return}
+  try{const ab=await p.snd.arrayBuffer();const b=await new Promise((ok,ko)=>ac().decodeAudioData(ab,ok,ko));buffers.set(i,b)}
+  catch(e){buffers.delete(i);toast("Ce fichier son n'est pas lisible")}}
+const playing=new Map();
+function play(i){const c=ac();const b=buffers.get(i);
+  if(playing.has(i)){try{playing.get(i).stop()}catch(e){}}
+  if(b){const s=c.createBufferSource();s.buffer=b;s.connect(c.destination);s.start();playing.set(i,s);s.onended=()=>playing.delete(i);return}
+  demo(i)}
+function demo(i){ /* petit "boing" rigolo, une note différente par case */
+  const c=ac(),t=c.currentTime,scale=[0,2,4,7,9];
+  const f=262*Math.pow(2,(scale[i%5]+12*Math.floor(i/5))/12);
+  const o=c.createOscillator(),g=c.createGain(),l=c.createOscillator(),lg=c.createGain();
+  o.type="triangle";o.frequency.setValueAtTime(f*1.6,t);o.frequency.exponentialRampToValueAtTime(f,t+.12);
+  l.frequency.value=9;lg.gain.value=f*.04;l.connect(lg);lg.connect(o.frequency);
+  g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.4,t+.02);g.gain.exponentialRampToValueAtTime(.001,t+.6);
+  o.connect(g);g.connect(c.destination);o.start(t);l.start(t);o.stop(t+.62);l.stop(t+.62)}
+
+/* ---------- grille ---------- */
+const urls=new Map();
+function imgURL(i){const p=pads[i];if(!p.img)return null;if(!urls.has(i)||urls.get(i).blob!==p.img){
+  if(urls.has(i))URL.revokeObjectURL(urls.get(i).u);urls.set(i,{blob:p.img,u:URL.createObjectURL(p.img)})}return urls.get(i).u}
+function render(){const g=$("grid");g.innerHTML="";
+  pads.forEach((p,i)=>{const b=document.createElement("button");b.className="pad"+(p.img?" has-img":"")+(editing&&i===cur?" sel":"");b.style.setProperty("--c",p.color);
+    b.setAttribute("aria-label",p.label||p.emoji);
+    const u=imgURL(i);b.innerHTML=(u?`<img alt="" src="${u}">`:`<span class="emo">${p.emoji}</span>`)+(p.label?`<span class="lbl"></span>`:"")+`<span class="ring"></span>`;
+    if(p.label)b.querySelector(".lbl").textContent=p.label;
+    b.addEventListener("click",()=>{if(editing)openSheet(i,true)});
+    b.addEventListener("pointerdown",e=>{if(editing)return;e.preventDefault();
+      play(i);b.classList.remove("hit");void b.offsetWidth;b.classList.add("hit");setTimeout(()=>b.classList.remove("hit"),180)});
+    b.addEventListener("keydown",e=>{if(e.key===" "||e.key==="Enter"){e.preventDefault();editing?openSheet(i):play(i)}});
+    g.appendChild(b)});
+  $("app").classList.toggle("editing",editing);$("banner").hidden=!editing;$("lock").hidden=editing}
+
+/* ---------- mode parent : maintenir 1,5 s ---------- */
+let holdT=null;const lock=$("lock");
+lock.addEventListener("pointerdown",e=>{e.preventDefault();lock.classList.add("holding");holdT=setTimeout(()=>{lock.classList.remove("holding");editing=true;render()},1500)});
+["pointerup","pointerleave","pointercancel"].forEach(ev=>lock.addEventListener(ev,()=>{clearTimeout(holdT);lock.classList.remove("holding")}));
+$("done").onclick=()=>{editing=false;cur=-1;$("sheet").hidden=true;$("app").scrollTop=0;render()};
+
+/* ---------- panneau d'édition ---------- */
+function openSheet(i,fromTap){const changed=cur!==i;cur=i;const p=pads[i];$("sheet").hidden=false;
+  if(fromTap){if(changed)render();const el=$("grid").children[i];if(el)el.scrollIntoView({block:"start",behavior:"smooth"})}$("sEmo").textContent=p.emoji;$("fLabel").value=p.label||"";
+  $("fEmos").innerHTML="";EMOS.forEach(e=>{const b=document.createElement("button");b.textContent=e;b.className=e===p.emoji?"on":"";
+    b.onclick=()=>{const old=NAMES[p.emoji];p.emoji=e;if(!p.label||p.label===old){p.label=NAMES[e];$("fLabel").value=p.label}commit()};$("fEmos").appendChild(b)});
+  $("fCols").innerHTML="";COLS.forEach(c=>{const b=document.createElement("button");b.style.setProperty("--c",c);b.className=c===p.color?"on":"";
+    b.setAttribute("aria-label","Couleur");b.onclick=()=>{p.color=c;commit()};$("fCols").appendChild(b)});
+  $("imgNote").textContent=p.img?("Photo : "+(p.img.name||"image")):"Aucune photo, l'animal est affiché.";$("rmImg").hidden=!p.img;
+  $("sndNote").textContent=p.snd?("Son : "+(p.snd.name||"fichier")):"Son de démo.";$("rmSnd").hidden=!p.snd}
+function commit(){save();render();if(cur>=0)openSheet(cur)}
+$("fLabel").oninput=e=>{pads[cur].label=e.target.value;save();render()};
+$("fImg").onchange=e=>{const f=e.target.files[0];if(!f)return;e.target.value="";shrinkLater(f)};
+async function shrinkLater(f){ /* réduit la photo pour ne pas surcharger l'iPad */
+  try{const bmp=await createImageBitmap(f);const s=Math.min(1,600/Math.max(bmp.width,bmp.height));
+    const cv=document.createElement("canvas");cv.width=bmp.width*s;cv.height=bmp.height*s;cv.getContext("2d").drawImage(bmp,0,0,cv.width,cv.height);
+    const blob=await new Promise(r=>cv.toBlob(r,"image/jpeg",.85));pads[cur].img=new File([blob],f.name,{type:"image/jpeg"})}
+  catch(err){pads[cur].img=f}commit();toast("Photo ajoutée")}
+$("fSnd").onchange=async e=>{const f=e.target.files[0];if(!f)return;const i=cur;pads[i].snd=f;e.target.value="";await decode(i);commit();play(i);toast("Son ajouté")};
+$("rmImg").onclick=()=>{pads[cur].img=null;commit()};
+$("rmSnd").onclick=()=>{pads[cur].snd=null;buffers.delete(cur);commit()};
+$("test").onclick=()=>play(cur);
+$("close").onclick=()=>{$("sheet").hidden=true;cur=-1;render()};
+let resetArm=false;$("reset").onclick=e=>{if(!resetArm){resetArm=true;e.target.textContent="Appuie encore pour confirmer";setTimeout(()=>{resetArm=false;e.target.textContent="Remettre toutes les cases d'origine"},3000);return}
+  pads=defaults();buffers.clear();resetArm=false;e.target.textContent="Remettre toutes les cases d'origine";save();render();$("sheet").hidden=true;toast("Cases remises à zéro")};
+
+/* ---------- sauvegarde / restauration dans un fichier ---------- */
+const b64of=blob=>new Promise((ok,ko)=>{const r=new FileReader();r.onload=()=>ok(String(r.result).split(",")[1]);r.onerror=ko;r.readAsDataURL(blob)});
+const blobOf=o=>{if(!o)return null;const bin=atob(o.b64),u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);
+  return new File([u],o.name||"fichier",{type:o.type||""})};
+let downloads=null;
+downloads={save:async({filename,data})=>{const f=new File([data],filename,{type:"application/json"});
+  if(navigator.canShare&&navigator.canShare({files:[f]})){
+    try{await navigator.share({files:[f]})}catch(e){if(e&&e.name==="AbortError")throw {code:"declined"};throw e}}
+  else{const a=document.createElement("a");a.href=URL.createObjectURL(f);a.download=filename;document.body.appendChild(a);a.click();
+    setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},3000)}}};
+$("exp").onclick=async()=>{const btn=$("exp");if(!downloads){toast("Sauvegarde indisponible ici");return}
+  btn.disabled=true;btn.textContent="Préparation…";
+  try{const out=[];for(const p of pads){out.push({emoji:p.emoji,label:p.label,color:p.color,
+      img:p.img?{name:p.img.name,type:p.img.type,b64:await b64of(p.img)}:null,
+      snd:p.snd?{name:p.snd.name,type:p.snd.type,b64:await b64of(p.snd)}:null})}
+    const d=new Date().toISOString().slice(0,10);
+    await downloads.save({filename:`pad-animaux-sauvegarde-${d}.json`,data:new Blob([JSON.stringify({app:"pad-animaux",v:1,pads:out})],{type:"application/json"})});
+    toast("Sauvegarde enregistrée")}
+  catch(e){toast(e&&e.code==="declined"?"Sauvegarde annulée":"La sauvegarde n'a pas abouti")}
+  finally{btn.disabled=false;btn.textContent="💾 Sauvegarder"}};
+$("fBackup").onchange=async e=>{const f=e.target.files[0];e.target.value="";if(!f)return;
+  try{const j=JSON.parse(await f.text());if(j.app!=="pad-animaux"||!Array.isArray(j.pads)||j.pads.length!==16)throw 0;
+    pads=j.pads.map(p=>({emoji:p.emoji,label:p.label,color:p.color,img:blobOf(p.img),snd:blobOf(p.snd)}));
+    buffers.clear();save();render();for(let i=0;i<16;i++)if(pads[i].snd)decode(i);toast("Pad restauré")}
+  catch(err){toast("Ce fichier n'est pas une sauvegarde du pad")}};
+
+/* ---------- plein écran ---------- */
+const fsEl=document.documentElement;
+const canFS=!!(fsEl.requestFullscreen||fsEl.webkitRequestFullscreen)&&(document.fullscreenEnabled||document.webkitFullscreenEnabled);
+const standalone=navigator.standalone||matchMedia("(display-mode: standalone)").matches||matchMedia("(display-mode: fullscreen)").matches;
+if(!canFS||standalone)$("fs").hidden=true;
+const isFS=()=>!!(document.fullscreenElement||document.webkitFullscreenElement);
+$("fs").onclick=async()=>{try{
+  if(isFS()){await (document.exitFullscreen||document.webkitExitFullscreen).call(document)}
+  else{await (fsEl.requestFullscreen||fsEl.webkitRequestFullscreen).call(fsEl)}}
+  catch(e){toast("Plein écran indisponible ici")}};
+["fullscreenchange","webkitfullscreenchange"].forEach(ev=>document.addEventListener(ev,()=>{$("fs").textContent=isFS()?"✕ Quitter":"⛶ Plein écran"}));
+
+function toast(m){const t=$("toast");t.textContent=m;t.hidden=false;clearTimeout(t._t);t._t=setTimeout(()=>t.hidden=true,1800)}
+$("go").addEventListener("click",()=>{ac();$("start").hidden=true});
+document.addEventListener("gesturestart",e=>e.preventDefault());
+document.addEventListener("contextmenu",e=>e.preventDefault());
+(async()=>{await openDB();await load();render();for(let i=0;i<16;i++)if(pads[i].snd)decode(i)})();
+</script>
+
+</body></html>
